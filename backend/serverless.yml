@@ -24,10 +24,41 @@ provider:
   name: aws
   runtime: python3.8
   lambdaHashingVersion: 20201221
+  profile: cn
 
 # you can overwrite defaults here
-#  stage: dev
-#  region: us-east-1
+  stage: dev
+  region: cn-north-1
+
+custom:
+  appSync:
+    name: sls-deployment
+    authenticationType: API_KEY
+    apiKeys:
+      - name: test # name of the api key
+        description: 'test api key'
+        expiresAfter: 30d # api key life time
+    schema: schema.graphql
+    mappingTemplatesLocation: mapping-templates
+    mappingTemplates:
+      - dataSource: Users
+        type: Query
+        field: getUserInfo
+        request: "getUserInfo-request-mapping-template.vtl"
+        response: "getUserInfo-response-mapping-template.vtl"
+      - dataSource: Users
+        type: Mutation
+        field: addUserInfo
+        request: "addUserInfo-request-mapping-template.vtl"
+        response: "addUserInfo-response-mapping-template.vtl"
+    dataSources:
+      - type: AMAZON_DYNAMODB
+        name: Users
+        description: 'Users table'
+        config:
+          tableName: { Ref: UserTable }
+          serviceRoleArn: { Fn::GetAtt: [AppSyncDynamoDBServiceRole, Arn] }
+
 
 # you can add statements to the Lambda function's IAM Role here
 #  iamRoleStatements:
@@ -57,9 +88,9 @@ provider:
 #    - include-me.py
 #    - include-me-dir/**
 
-functions:
-  hello:
-    handler: handler.hello
+# functions:
+#   hello:
+#     handler: handler.hello
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details
@@ -101,16 +132,45 @@ functions:
 #      variable2: value2
 
 # you can add CloudFormation resource templates here
-#resources:
-#  Resources:
-#    NewResource:
-#      Type: AWS::S3::Bucket
-#      Properties:
-#        BucketName: my-new-bucket
-#  Outputs:
-#     NewOutput:
-#       Description: "Description for the output"
-#       Value: "Some output value"
+resources:
+  Resources:
+    AppSyncDynamoDBServiceRole:
+      Type: AWS::IAM::Role
+      Properties: 
+        AssumeRolePolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - appsync.amazonaws.com
+              Action:
+                - 'sts:AssumeRole'
+        Description: The role to handle dynamodb
+        ManagedPolicyArns: 
+          - arn:aws-cn:iam::aws:policy/AmazonDynamoDBFullAccess
+    UserTable:
+      Type: AWS::DynamoDB::Table
+      Properties: 
+        TableName: "TestTableAppsyncDeployment"
+        AttributeDefinitions: 
+          - 
+            AttributeName: "name"
+            AttributeType: "S"
+        KeySchema: 
+          - 
+            AttributeName: "name"
+            KeyType: "HASH"
+        ProvisionedThroughput: 
+          ReadCapacityUnits: "5"
+          WriteCapacityUnits: "5"
+
+
+
+  # Outputs:
+  #   NewOutput:
+  #     Description: "Description for the output"
+  #     Value: "Some output value"
 
 plugins:
   - serverless-appsync-plugin

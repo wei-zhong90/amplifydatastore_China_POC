@@ -1,0 +1,25 @@
+type Mutation {
+    # Create user info is available in dynamo integration
+	addUserInfo(
+		name: String!,
+		handle: String,
+        location: String
+	): User!
+}
+
+type Query {
+	getUserInfo(name: String!): User!
+}
+
+
+
+type User {
+	name: String!
+	handle: String
+	location: String
+}
+
+schema {
+	query: Query
+	mutation: Mutation
+}
