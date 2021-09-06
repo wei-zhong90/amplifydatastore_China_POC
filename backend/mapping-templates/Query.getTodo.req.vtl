@@ -2,6 +2,6 @@
   "version": "2018-05-29",
   "operation": "GetItem",
   "key": #if( $modelObjectKey ) $util.toJson($modelObjectKey) #else {
-  "name": $util.dynamodb.toDynamoDBJson($ctx.args.name)
+  "id": $util.dynamodb.toDynamoDBJson($ctx.args.id)
 } #end
 }

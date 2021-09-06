@@ -43,14 +43,43 @@ custom:
     mappingTemplates:
       - dataSource: Users
         type: Query
-        field: getUserInfo
-        request: "getUserInfo-request-mapping-template.vtl"
-        response: "getUserInfo-response-mapping-template.vtl"
+        field: getTodo
+        request: "Query.getTodo.req.vtl"
+        response: "Query.getTodo.res.vtl"
+      - dataSource: Users
+        type: Query
+        field: listTodos
+        request: "Query.listTodos.req.vtl"
+        response: "Query.listTodos.res.vtl"
+      - dataSource: Users
+        type: Query
+        field: syncTodos
+        request: "Query.syncTodos.req.vtl"
+        response: "Query.syncTodos.res.vtl"
       - dataSource: Users
         type: Mutation
-        field: addUserInfo
-        request: "addUserInfo-request-mapping-template.vtl"
-        response: "addUserInfo-response-mapping-template.vtl"
+        field: createTodo
+        request: "Mutation.createTodo.req.vtl"
+        response: "Mutation.createTodo.res.vtl"
+        sync:
+          conflictDetection: VERSION
+          conflictHandler: AUTOMERGE
+      - dataSource: Users
+        type: Mutation
+        field: deleteTodo
+        request: "Mutation.deleteTodo.req.vtl"
+        response: "Mutation.deleteTodo.res.vtl"
+        sync:
+          conflictDetection: VERSION
+          conflictHandler: AUTOMERGE
+      - dataSource: Users
+        type: Mutation
+        field: updateTodo
+        request: "Mutation.updateTodo.req.vtl"
+        response: "Mutation.updateTodo.res.vtl"
+        sync:
+          conflictDetection: VERSION
+          conflictHandler: AUTOMERGE
     dataSources:
       - type: AMAZON_DYNAMODB
         name: Users
@@ -58,6 +87,11 @@ custom:
         config:
           tableName: { Ref: UserTable }
           serviceRoleArn: { Fn::GetAtt: [AppSyncDynamoDBServiceRole, Arn] }
+          versioned: true
+          deltaSyncConfig:
+            baseTableTTL: 0 # (default, not required) # The amount of time (in minutes) items should be kept in the base table when deleted. Set to 0 to delete items in the base table immediately
+            deltaSyncTableName: { Ref: MyTableDelta } # required # The Delta Sync table name
+            deltaSyncTableTTL: 60
 
 
 # you can add statements to the Lambda function's IAM Role here
@@ -161,6 +195,27 @@ resources:
           - 
             AttributeName: "name"
             KeyType: "HASH"
+        ProvisionedThroughput: 
+          ReadCapacityUnits: "5"
+          WriteCapacityUnits: "5"
+    MyTableDelta:
+      Type: AWS::DynamoDB::Table
+      Properties: 
+        TableName: "AppsyncDeltaDeployment"
+        AttributeDefinitions: 
+          - 
+            AttributeName: "ds_pk"
+            AttributeType: "S"
+          - 
+            AttributeName: "ds_sk"
+            AttributeType: "S"
+        KeySchema: 
+          - 
+            AttributeName: "ds_pk"
+            KeyType: "HASH"
+          - 
+            AttributeName: "ds_sk"
+            KeyType: "RANGE"
         ProvisionedThroughput: 
           ReadCapacityUnits: "5"
           WriteCapacityUnits: "5"
